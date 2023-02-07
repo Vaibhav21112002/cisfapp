@@ -15,6 +15,7 @@ const DASchema = new mongoose.Schema({
 	},
 	type: {
 		type: String,
+		default : "da"
 	},
 });
 

@@ -1,4 +1,5 @@
 const DA = require("../models/DA");
+const Diary = require("../models/Diary");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -44,9 +45,21 @@ exports.createDA = async (req, res) => {
 		});
 
 		const newDA = await da.save();
-		res.status(201).json(newDA);
+		if (newDA.success == false) {
+			swal({
+				title: "Error!",
+				text: "Something went wrong!",
+				icon: "error",
+			});
+			return;
+		}
+		res.status(201).json({
+			success: true,
+			message: "DA created successfully",
+			da: newDA,
+		});
 	} catch (err) {
-		res.status(200).json({ message: err.message });
+		res.status(200).json({ success: false, message: err.message });
 	}
 };
 
@@ -114,5 +127,56 @@ exports.getDAIdByToken = async (req, res) => {
 		res.status(200).json({ daId: da._id });
 	} catch (err) {
 		res.status(200).json({ message: err.message });
+	}
+};
+
+exports.getDAByToken = async (req, res) => {
+	try {
+		const token = req.body.token;
+		if (!token) {
+			return res
+				.status(200)
+				.json({ message: "No token, authorization denied" });
+		}
+
+		const decoded = jwt.verify(token, JWT_SECRET);
+		if (!decoded) {
+			return res.status(200).json({ message: "Invalid token" });
+		}
+
+		const da = await DA.findById(decoded.id);
+		if (!da) {
+			return res.status(200).json({ message: "User does not exist" });
+		}
+
+		let name = da.name + " (" + da.type.toUpperCase() + ")";
+		res.status(200).json({ da: name });
+	} catch (err) {
+		res.status(200).json({ message: err.message });
+	}
+};
+
+exports.removeDA = async (req, res) => {
+	const id = req.params.id;
+	try {
+		const da = await DA.findById(id);
+		if (!da) {
+			return res
+				.status(200)
+				.json({ success: false, message: "User does not exist" });
+		}
+
+		const diary = await Diary.find({ markedTo: id });
+		for (let i = 0; i < diary.length; i++) {
+			await Diary.findByIdAndDelete(diary[i]._id);
+		}
+
+		await DA.findByIdAndDelete(id);
+		res.status(200).json({
+			success: true,
+			message: "User removed successfully",
+		});
+	} catch (err) {
+		res.status(200).json({ success: false, message: err.message });
 	}
 };

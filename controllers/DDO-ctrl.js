@@ -1,5 +1,5 @@
-const { create } = require("../models/DDO");
 const DDO = require("../models/DDO");
+const Diary = require("../models/Diary");
 
 exports.getDDO = async (req, res) => {
 	try {
@@ -78,6 +78,10 @@ exports.updateDDO = async (req, res) => {
 exports.deleteDDO = async (req, res) => {
 	try {
 		const ddo = await DDO.findById(req.params.id);
+		const diaries = await Diary.find({ from: ddo.code });
+		for (let i = 0; i < diaries.length; i++) {
+			await Diary.findByIdAndDelete(diaries[i]._id);
+		}
 		await ddo.remove();
 		res.status(200).json({ message: "Deleted DDO" });
 	} catch (err) {
